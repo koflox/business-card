@@ -32,3 +32,15 @@
   height: 14px;
   flex-shrink: 0;
 }
+
+@media (orientation: portrait) {
+  .container {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .link {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.65rem;
+  }
+}

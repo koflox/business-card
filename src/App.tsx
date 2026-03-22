@@ -9,19 +9,17 @@ export function App() {
   return (
     <div className={styles.app}>
       <Scanlines />
-      <aside className={styles.sidebar}>
-        <div className={styles.sidebarTop}>
-          <Hero />
-          <SocialLinks />
-        </div>
-        <div className={styles.sidebarBottom}>
-          <InterestTags />
-          <p className={styles.copyright}>&copy; {new Date().getFullYear()} koflox</p>
-        </div>
-      </aside>
+      <header className={styles.header}>
+        <Hero />
+        <SocialLinks />
+      </header>
       <main className={styles.photos}>
         <PhotoSlider />
       </main>
+      <footer className={styles.footer}>
+        <InterestTags />
+        <p className={styles.copyright}>&copy; {new Date().getFullYear()} koflox</p>
+      </footer>
     </div>
   )
 }

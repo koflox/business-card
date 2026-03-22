@@ -47,7 +47,7 @@
   text-transform: uppercase;
 }
 
-/* Slide animations */
+/* Vertical slide animations (landscape) */
 .exitDown {
   animation: exitDown 0.8s ease-in-out forwards;
 }
@@ -82,4 +82,47 @@
 @keyframes enterFromBottom {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
+}
+
+/* Horizontal slide animations (portrait) */
+@keyframes exitLeft {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes enterFromRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes exitRight {
+  from { transform: translateX(0); }
+  to { transform: translateX(100%); }
+}
+
+@keyframes enterFromLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@media (orientation: portrait) {
+  .column {
+    height: auto;
+  }
+
+  .exitDown {
+    animation-name: exitLeft;
+  }
+
+  .enterFromTop {
+    animation-name: enterFromRight;
+  }
+
+  .exitUp {
+    animation-name: exitRight;
+  }
+
+  .enterFromBottom {
+    animation-name: enterFromLeft;
+  }
 }
