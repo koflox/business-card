@@ -1,0 +1,29 @@
+:root {
+  /* Background */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a2e;
+
+  /* Neon accent colors */
+  --neon-cyan: #00f0ff;
+  --neon-magenta: #ff00aa;
+  --neon-yellow: #f0ff00;
+
+  /* Text */
+  --text-primary: #e0e0e8;
+  --text-muted: #8888aa;
+
+  /* Fonts */
+  --font-heading: 'Orbitron', sans-serif;
+  --font-body: 'JetBrains Mono', monospace;
+
+  /* Glow */
+  --glow-cyan: 0 0 10px #00f0ff, 0 0 40px rgba(0, 240, 255, 0.3);
+  --glow-magenta: 0 0 10px #ff00aa, 0 0 40px rgba(255, 0, 170, 0.3);
+  --glow-yellow: 0 0 10px #f0ff00, 0 0 40px rgba(240, 255, 0, 0.3);
+
+  /* Spacing */
+  --section-gap: 4rem;
+  --content-max-width: 900px;
+  --content-padding: 1.5rem;
+}

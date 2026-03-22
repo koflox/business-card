@@ -1,0 +1,22 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: clamp(1.3rem, 1.8vw, 2rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.subtitle {
+  margin-top: 0.4rem;
+  font-family: var(--font-body);
+  font-size: clamp(0.55rem, 0.7vw, 0.75rem);
+  color: var(--neon-cyan);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
