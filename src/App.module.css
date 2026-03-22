@@ -57,22 +57,25 @@
   }
 
   .header {
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
-    gap: 1.5rem;
+    gap: 1rem;
     padding: 1.2rem 1.5rem;
     border-right: none;
     border-bottom: 1px solid rgba(0, 240, 255, 0.1);
   }
 
   .footer {
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
     align-items: center;
-    gap: 0.5rem 0.75rem;
+    gap: 0.6rem;
     padding: 1rem 1.5rem;
     border-right: none;
     border-top: 1px solid rgba(0, 240, 255, 0.1);
+  }
+
+  .copyright {
+    text-align: center;
   }
 
   .photos {
