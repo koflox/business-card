@@ -13,6 +13,34 @@ const PLACEHOLDER_COLORS = [
   '#0f1720', '#121a24', '#1a0d1f', '#0d1520',
 ]
 
+const preloadedUrls = new Set<string>()
+
+function preloadImage(src: string): Promise<void> {
+  if (preloadedUrls.has(src)) return Promise.resolve()
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => { preloadedUrls.add(src); resolve() }
+    img.onerror = () => resolve()
+    img.src = src
+  })
+}
+
+function preloadByIndices(indices: number[]): Promise<void> {
+  return Promise.all(indices.map(i => preloadImage(photos[i].src))).then(() => {})
+}
+
+function preloadAllInBackground() {
+  let i = 0
+  function next() {
+    if (i >= photos.length) return
+    preloadImage(photos[i].src).then(() => {
+      i++
+      requestIdleCallback ? requestIdleCallback(next) : setTimeout(next, 100)
+    })
+  }
+  next()
+}
+
 function PhotoCell({ photoIndex, onError }: {
   photoIndex: number
   onError: (src: string) => void
@@ -52,6 +80,7 @@ export function PhotoSlider({ columnCount }: { columnCount: number }) {
   const lastAssignedRef = useRef<number[]>([])
   const slideTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cancelledRef = useRef(false)
 
   const updateColumns = useCallback((updater: (prev: ColumnState[]) => ColumnState[]) => {
     const next = updater(columnsRef.current)
@@ -84,26 +113,33 @@ export function PhotoSlider({ columnCount }: { columnCount: number }) {
     slideTimersRef.current.forEach(t => clearTimeout(t))
     slideTimersRef.current = []
 
+    const preloaded = preloadByIndices(nextPhotos)
+
     for (let i = 0; i < count; i++) {
       const delay = driftsRef.current[i] + maxDrift
       const nextIdx = nextPhotos[i]
 
       const timer = setTimeout(() => {
-        if (hoveredRef.current.has(i)) return
+        if (cancelledRef.current || hoveredRef.current.has(i)) return
 
-        updateColumns(prev => {
-          const updated = [...prev]
-          updated[i] = { ...updated[i], next: nextIdx, transitioning: true }
-          return updated
-        })
+        preloaded.then(() => {
+          if (cancelledRef.current || hoveredRef.current.has(i)) return
 
-        setTimeout(() => {
           updateColumns(prev => {
             const updated = [...prev]
-            updated[i] = { current: nextIdx, next: -1, transitioning: false }
+            updated[i] = { ...updated[i], next: nextIdx, transitioning: true }
             return updated
           })
-        }, SLIDE_DURATION)
+
+          setTimeout(() => {
+            if (cancelledRef.current) return
+            updateColumns(prev => {
+              const updated = [...prev]
+              updated[i] = { current: nextIdx, next: -1, transitioning: false }
+              return updated
+            })
+          }, SLIDE_DURATION)
+        })
       }, delay)
 
       slideTimersRef.current.push(timer)
@@ -119,8 +155,16 @@ export function PhotoSlider({ columnCount }: { columnCount: number }) {
     driftsRef.current = []
     lastAssignedRef.current = []
     hoveredRef.current.clear()
-    runCycle()
+    cancelledRef.current = false
+
+    preloadByIndices(init.map(c => c.current)).then(() => {
+      if (!cancelledRef.current) runCycle()
+    })
+
+    preloadAllInBackground()
+
     return () => {
+      cancelledRef.current = true
       if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current)
       slideTimersRef.current.forEach(t => clearTimeout(t))
     }
