@@ -1,35 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { photos } from '../../data/photos'
+import { COLUMN_COUNT, pickUniquePhotos, buildExcludeSet, initColumns } from './photoUtils'
+import type { ColumnState } from './photoUtils'
 import styles from './PhotoSlider.module.css'
 
-const COLUMN_COUNT = 4
 const SLIDE_DURATION = 800
-const MIN_DELAY = 3000
-const MAX_DELAY = 6000
+const CYCLE_DURATION = 5000
+const DRIFT_RANGE = 0.20
 
 const PLACEHOLDER_COLORS = [
   '#0d1117', '#161b22', '#0f1923', '#1a1025',
   '#0f1720', '#121a24', '#1a0d1f', '#0d1520',
 ]
-
-function randomDelay() {
-  return MIN_DELAY + Math.random() * (MAX_DELAY - MIN_DELAY)
-}
-
-function randomIndex(exclude: number) {
-  if (photos.length <= 1) return 0
-  let idx: number
-  do {
-    idx = Math.floor(Math.random() * photos.length)
-  } while (idx === exclude)
-  return idx
-}
-
-interface ColumnState {
-  current: number
-  next: number
-  transitioning: boolean
-}
 
 function PhotoCell({ photoIndex, onError }: {
   photoIndex: number
@@ -56,77 +38,95 @@ function PlaceholderCell({ index }: { index: number }) {
   )
 }
 
-function initColumns(): ColumnState[] {
-  return Array.from({ length: COLUMN_COUNT }, (_, i) => ({
-    current: i % photos.length,
-    next: -1,
-    transitioning: false,
-  }))
-}
-
 export function PhotoSlider() {
-  const [columns, setColumns] = useState<ColumnState[]>(initColumns)
+  const columnsRef = useRef<ColumnState[]>([])
+  const [columns, setColumns] = useState<ColumnState[]>(() => {
+    const init = initColumns(COLUMN_COUNT, photos.length)
+    columnsRef.current = init
+    return init
+  })
   const [failedSrcs, setFailedSrcs] = useState<Set<string>>(new Set())
 
   const hoveredRef = useRef(new Set<number>())
-  const timersRef = useRef(new Map<number, ReturnType<typeof setTimeout>>())
+  const driftsRef = useRef<number[]>([])
+  const lastAssignedRef = useRef<number[]>([])
+  const slideTimersRef = useRef<ReturnType<typeof setTimeout>[]>([])
+  const cycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const updateColumns = useCallback((updater: (prev: ColumnState[]) => ColumnState[]) => {
+    const next = updater(columnsRef.current)
+    columnsRef.current = next
+    setColumns(next)
+  }, [])
 
   const handleImageError = useCallback((src: string) => {
     setFailedSrcs(prev => new Set(prev).add(src))
   }, [])
 
-  const scheduleSlide = useCallback((colIndex: number) => {
+  const runCycle = useCallback(() => {
     if (photos.length < 2) return
 
-    const existing = timersRef.current.get(colIndex)
-    if (existing) clearTimeout(existing)
+    const maxDrift = DRIFT_RANGE * CYCLE_DURATION
 
-    const timer = setTimeout(() => {
-      if (hoveredRef.current.has(colIndex)) return
+    if (driftsRef.current.length === 0) {
+      driftsRef.current = Array.from({ length: COLUMN_COUNT }, () =>
+        (Math.random() * 2 - 1) * maxDrift
+      )
+    } else {
+      driftsRef.current = driftsRef.current.map(d => -d)
+    }
 
-      setColumns(prev => {
-        const col = prev[colIndex]
-        const nextIdx = randomIndex(col.current)
-        const updated = [...prev]
-        updated[colIndex] = { current: col.current, next: nextIdx, transitioning: true }
-        return updated
-      })
+    const exclude = buildExcludeSet(columnsRef.current, lastAssignedRef.current)
+    const nextPhotos = pickUniquePhotos(COLUMN_COUNT, exclude, photos.length)
+    lastAssignedRef.current = nextPhotos
 
-      setTimeout(() => {
-        setColumns(prev => {
-          const col = prev[colIndex]
+    slideTimersRef.current.forEach(t => clearTimeout(t))
+    slideTimersRef.current = []
+
+    for (let i = 0; i < COLUMN_COUNT; i++) {
+      const delay = driftsRef.current[i] + maxDrift
+      const nextIdx = nextPhotos[i]
+
+      const timer = setTimeout(() => {
+        if (hoveredRef.current.has(i)) return
+
+        updateColumns(prev => {
           const updated = [...prev]
-          updated[colIndex] = { current: col.next, next: -1, transitioning: false }
+          updated[i] = { ...updated[i], next: nextIdx, transitioning: true }
           return updated
         })
-        scheduleSlide(colIndex)
-      }, SLIDE_DURATION)
-    }, randomDelay())
 
-    timersRef.current.set(colIndex, timer)
-  }, [])
+        setTimeout(() => {
+          updateColumns(prev => {
+            const updated = [...prev]
+            updated[i] = { current: nextIdx, next: -1, transitioning: false }
+            return updated
+          })
+        }, SLIDE_DURATION)
+      }, delay)
+
+      slideTimersRef.current.push(timer)
+    }
+
+    cycleTimerRef.current = setTimeout(runCycle, CYCLE_DURATION)
+  }, [updateColumns])
 
   useEffect(() => {
-    for (let i = 0; i < COLUMN_COUNT; i++) {
-      scheduleSlide(i)
-    }
+    driftsRef.current = []
+    lastAssignedRef.current = []
+    runCycle()
     return () => {
-      timersRef.current.forEach(t => clearTimeout(t))
+      if (cycleTimerRef.current) clearTimeout(cycleTimerRef.current)
+      slideTimersRef.current.forEach(t => clearTimeout(t))
     }
-  }, [scheduleSlide])
+  }, [runCycle])
 
   const handleMouseEnter = (colIndex: number) => {
     hoveredRef.current.add(colIndex)
-    const existing = timersRef.current.get(colIndex)
-    if (existing) {
-      clearTimeout(existing)
-      timersRef.current.delete(colIndex)
-    }
   }
 
   const handleMouseLeave = (colIndex: number) => {
     hoveredRef.current.delete(colIndex)
-    scheduleSlide(colIndex)
   }
 
   if (photos.length === 0) {

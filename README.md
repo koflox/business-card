@@ -16,6 +16,8 @@ npm run dev
 | `npm run dev` | Start dev server at localhost:5173 |
 | `npm run build` | Build for production → `dist/` |
 | `npm run preview` | Preview production build locally |
+| `npm run test` | Run tests once |
+| `npm run test:watch` | Run tests in watch mode |
 
 ## Photos
 
