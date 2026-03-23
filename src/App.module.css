@@ -41,8 +41,23 @@
 .photos {
   grid-area: photos;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
   height: 100vh;
+}
+
+/* Landscape mobile: wider sidebar */
+@media (orientation: landscape) and (max-width: 1023px) {
+  .app {
+    grid-template-columns: 25% 1fr;
+  }
+
+  .header {
+    gap: 1rem;
+    padding: 1.5rem 1rem;
+  }
+
+  .footer {
+    padding: 0 1rem 1rem;
+  }
 }
 
 /* Portrait: vertical stack */
@@ -80,7 +95,6 @@
 
   .photos {
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, 1fr);
-    height: auto;
+    height: 100%;
   }
 }

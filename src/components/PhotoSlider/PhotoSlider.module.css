@@ -115,7 +115,7 @@
 
 @media (orientation: portrait) {
   .column {
-    height: auto;
+    height: 100%;
   }
 
   .exitDown {

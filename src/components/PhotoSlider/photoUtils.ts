@@ -1,5 +1,3 @@
-export const COLUMN_COUNT = 4
-
 export interface ColumnState {
   current: number
   next: number

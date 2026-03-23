@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { pickUniquePhotos, initColumns, buildExcludeSet, COLUMN_COUNT } from './photoUtils'
+import { pickUniquePhotos, initColumns, buildExcludeSet } from './photoUtils'
+
+const TOTAL = 24
 
 describe('pickUniquePhotos', () => {
-  const TOTAL = 15
-
   it('returns the requested number of photos', () => {
     const result = pickUniquePhotos(4, new Set(), TOTAL)
     expect(result).toHaveLength(4)
@@ -31,7 +31,7 @@ describe('pickUniquePhotos', () => {
   })
 
   it('works when excluding most photos (tight pool)', () => {
-    const exclude = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    const exclude = new Set(Array.from({ length: TOTAL - 4 }, (_, i) => i))
     const result = pickUniquePhotos(4, exclude, TOTAL)
     expect(result).toHaveLength(4)
     expect(new Set(result).size).toBe(4)
@@ -41,7 +41,7 @@ describe('pickUniquePhotos', () => {
   })
 
   it('returns fewer if not enough available photos', () => {
-    const exclude = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    const exclude = new Set(Array.from({ length: TOTAL - 2 }, (_, i) => i))
     const result = pickUniquePhotos(4, exclude, TOTAL)
     expect(result).toHaveLength(2)
     expect(new Set(result).size).toBe(2)
@@ -61,23 +61,33 @@ describe('pickUniquePhotos', () => {
     }
     expect(results.size).toBeGreaterThan(1)
   })
+
+  it('works with different column counts', () => {
+    for (const count of [2, 3, 4, 5]) {
+      const result = pickUniquePhotos(count, new Set(), TOTAL)
+      expect(result).toHaveLength(count)
+      expect(new Set(result).size).toBe(count)
+    }
+  })
 })
 
 describe('initColumns', () => {
-  it('returns COLUMN_COUNT columns', () => {
-    const cols = initColumns(COLUMN_COUNT, 15)
-    expect(cols).toHaveLength(COLUMN_COUNT)
+  it('returns requested number of columns', () => {
+    for (const count of [2, 3, 4]) {
+      const cols = initColumns(count, TOTAL)
+      expect(cols).toHaveLength(count)
+    }
   })
 
-  it('columns start with sequential indices 0,1,2,3', () => {
-    const cols = initColumns(COLUMN_COUNT, 15)
+  it('columns start with sequential indices 0,1,2,...', () => {
+    const cols = initColumns(4, TOTAL)
     cols.forEach((col, i) => {
       expect(col.current).toBe(i)
     })
   })
 
   it('all columns start with transitioning=false and next=-1', () => {
-    const cols = initColumns(COLUMN_COUNT, 15)
+    const cols = initColumns(3, TOTAL)
     for (const col of cols) {
       expect(col.transitioning).toBe(false)
       expect(col.next).toBe(-1)
@@ -91,21 +101,17 @@ describe('buildExcludeSet', () => {
       { current: 0, next: -1, transitioning: false },
       { current: 5, next: -1, transitioning: false },
       { current: 9, next: -1, transitioning: false },
-      { current: 12, next: -1, transitioning: false },
     ]
     const exclude = buildExcludeSet(columns, [])
     expect(exclude.has(0)).toBe(true)
     expect(exclude.has(5)).toBe(true)
     expect(exclude.has(9)).toBe(true)
-    expect(exclude.has(12)).toBe(true)
   })
 
   it('includes next photo of columns mid-transition', () => {
     const columns = [
       { current: 0, next: 7, transitioning: true },
       { current: 5, next: -1, transitioning: false },
-      { current: 9, next: -1, transitioning: false },
-      { current: 12, next: -1, transitioning: false },
     ]
     const exclude = buildExcludeSet(columns, [])
     expect(exclude.has(7)).toBe(true)
@@ -141,86 +147,81 @@ describe('buildExcludeSet', () => {
   })
 })
 
-describe('full cycle simulation: no duplicates across columns or consecutive cycles', () => {
-  it('3 consecutive cycles produce no duplicate photos on screen', () => {
-    const totalPhotos = 15
-    let columns = initColumns(COLUMN_COUNT, totalPhotos)
-    let lastAssigned: number[] = []
+describe('full cycle simulation', () => {
+  for (const columnCount of [3, 4]) {
+    describe(`${columnCount} columns: no duplicates across columns or consecutive cycles`, () => {
+      it('3 consecutive cycles produce no duplicate photos on screen', () => {
+        let columns = initColumns(columnCount, TOTAL)
+        let lastAssigned: number[] = []
 
-    for (let cycle = 0; cycle < 3; cycle++) {
-      const exclude = buildExcludeSet(columns, lastAssigned)
-      const nextPhotos = pickUniquePhotos(COLUMN_COUNT, exclude, totalPhotos)
+        for (let cycle = 0; cycle < 3; cycle++) {
+          const exclude = buildExcludeSet(columns, lastAssigned)
+          const nextPhotos = pickUniquePhotos(columnCount, exclude, TOTAL)
 
-      // next photos must all be unique
-      expect(new Set(nextPhotos).size).toBe(COLUMN_COUNT)
+          expect(new Set(nextPhotos).size).toBe(columnCount)
 
-      // next photos must not match any currently displayed
-      const currentOnScreen = new Set(columns.map(c => c.current))
-      for (const idx of nextPhotos) {
-        expect(currentOnScreen.has(idx)).toBe(false)
-      }
+          const currentOnScreen = new Set(columns.map(c => c.current))
+          for (const idx of nextPhotos) {
+            expect(currentOnScreen.has(idx)).toBe(false)
+          }
 
-      // next photos must not match previous cycle's assignment
-      for (const idx of nextPhotos) {
-        expect(lastAssigned.includes(idx)).toBe(false)
-      }
+          for (const idx of nextPhotos) {
+            expect(lastAssigned.includes(idx)).toBe(false)
+          }
 
-      // simulate transition: columns update to next photos
-      lastAssigned = nextPhotos
-      columns = nextPhotos.map(idx => ({
-        current: idx,
-        next: -1,
-        transitioning: false,
-      }))
-    }
-  })
-
-  it('works correctly when one column is hovered (skipped)', () => {
-    const totalPhotos = 15
-    let columns = initColumns(COLUMN_COUNT, totalPhotos)
-    let lastAssigned: number[] = []
-
-    for (let cycle = 0; cycle < 3; cycle++) {
-      const exclude = buildExcludeSet(columns, lastAssigned)
-      const nextPhotos = pickUniquePhotos(COLUMN_COUNT, exclude, totalPhotos)
-
-      expect(new Set(nextPhotos).size).toBe(COLUMN_COUNT)
-
-      // simulate: column 0 is hovered, skip its transition
-      lastAssigned = nextPhotos
-      columns = columns.map((col, i) => {
-        if (i === 0) return col // hovered — stays on old photo
-        return { current: nextPhotos[i], next: -1, transitioning: false }
+          lastAssigned = nextPhotos
+          columns = nextPhotos.map(idx => ({
+            current: idx,
+            next: -1,
+            transitioning: false,
+          }))
+        }
       })
 
-      // after partial update: all visible photos must still be unique
-      const visible = columns.map(c => c.current)
-      expect(new Set(visible).size).toBe(COLUMN_COUNT)
-    }
-  })
+      it('works correctly when one column is hovered (skipped)', () => {
+        let columns = initColumns(columnCount, TOTAL)
+        let lastAssigned: number[] = []
 
-  it('stress test: 50 cycles never produce duplicates', () => {
-    const totalPhotos = 15
-    let columns = initColumns(COLUMN_COUNT, totalPhotos)
-    let lastAssigned: number[] = []
+        for (let cycle = 0; cycle < 3; cycle++) {
+          const exclude = buildExcludeSet(columns, lastAssigned)
+          const nextPhotos = pickUniquePhotos(columnCount, exclude, TOTAL)
 
-    for (let cycle = 0; cycle < 50; cycle++) {
-      const exclude = buildExcludeSet(columns, lastAssigned)
-      const nextPhotos = pickUniquePhotos(COLUMN_COUNT, exclude, totalPhotos)
+          expect(new Set(nextPhotos).size).toBe(columnCount)
 
-      expect(new Set(nextPhotos).size).toBe(COLUMN_COUNT)
+          lastAssigned = nextPhotos
+          columns = columns.map((col, i) => {
+            if (i === 0) return col
+            return { current: nextPhotos[i], next: -1, transitioning: false }
+          })
 
-      const currentOnScreen = new Set(columns.map(c => c.current))
-      for (const idx of nextPhotos) {
-        expect(currentOnScreen.has(idx)).toBe(false)
-      }
+          const visible = columns.map(c => c.current)
+          expect(new Set(visible).size).toBe(columnCount)
+        }
+      })
 
-      lastAssigned = nextPhotos
-      columns = nextPhotos.map(idx => ({
-        current: idx,
-        next: -1,
-        transitioning: false,
-      }))
-    }
-  })
+      it('stress test: 50 cycles never produce duplicates', () => {
+        let columns = initColumns(columnCount, TOTAL)
+        let lastAssigned: number[] = []
+
+        for (let cycle = 0; cycle < 50; cycle++) {
+          const exclude = buildExcludeSet(columns, lastAssigned)
+          const nextPhotos = pickUniquePhotos(columnCount, exclude, TOTAL)
+
+          expect(new Set(nextPhotos).size).toBe(columnCount)
+
+          const currentOnScreen = new Set(columns.map(c => c.current))
+          for (const idx of nextPhotos) {
+            expect(currentOnScreen.has(idx)).toBe(false)
+          }
+
+          lastAssigned = nextPhotos
+          columns = nextPhotos.map(idx => ({
+            current: idx,
+            next: -1,
+            transitioning: false,
+          }))
+        }
+      })
+    })
+  }
 })
