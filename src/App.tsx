@@ -7,7 +7,7 @@ import { useLayout } from './hooks/useColumnCount'
 import styles from './App.module.css'
 
 export function App() {
-  const { columnCount, isPortrait, showTags } = useLayout()
+  const { columnCount, isPortrait, isCompact } = useLayout()
 
   const photosStyle = isPortrait
     ? { gridTemplateRows: `repeat(${columnCount}, 1fr)` }
@@ -23,8 +23,8 @@ export function App() {
       <main className={styles.photos} style={photosStyle}>
         <PhotoSlider columnCount={columnCount} />
       </main>
-      <footer className={styles.footer}>
-        {showTags && <InterestTags />}
+      <footer className={`${styles.footer} ${isCompact && isPortrait ? styles.footerRow : ''}`}>
+        <InterestTags />
         <p className={styles.copyright}>&copy; {new Date().getFullYear()} koflox</p>
       </footer>
     </div>

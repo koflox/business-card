@@ -93,6 +93,17 @@
     text-align: center;
   }
 
+  .footerRow {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .footerRow .copyright {
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
   .photos {
     grid-template-columns: 1fr;
     height: 100%;

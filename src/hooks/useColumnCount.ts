@@ -8,25 +8,25 @@ const portrait = '(orientation: portrait)'
 export interface LayoutInfo {
   columnCount: number
   isPortrait: boolean
-  showTags: boolean
+  isCompact: boolean
 }
 
 function getLayout(): LayoutInfo {
-  if (typeof window === 'undefined') return { columnCount: 4, isPortrait: false, showTags: true }
+  if (typeof window === 'undefined') return { columnCount: 4, isPortrait: false, isCompact: false }
 
   const isPortrait = window.matchMedia(portrait).matches
   const isMobileLandscape = window.matchMedia(landscapeMobile).matches
 
   if (isPortrait) {
     const isTall = window.innerHeight >= PORTRAIT_HEIGHT_THRESHOLD
-    return { columnCount: isTall ? 4 : 3, isPortrait: true, showTags: isTall }
+    return { columnCount: isTall ? 4 : 3, isPortrait: true, isCompact: !isTall }
   }
 
   if (isMobileLandscape) {
-    return { columnCount: 3, isPortrait: false, showTags: false }
+    return { columnCount: 3, isPortrait: false, isCompact: true }
   }
 
-  return { columnCount: 4, isPortrait: false, showTags: true }
+  return { columnCount: 4, isPortrait: false, isCompact: false }
 }
 
 let cached: LayoutInfo = getLayout()
@@ -53,5 +53,5 @@ function subscribe(cb: () => void): () => void {
 }
 
 export function useLayout(): LayoutInfo {
-  return useSyncExternalStore(subscribe, getSnapshot, () => ({ columnCount: 4, isPortrait: false, showTags: true }))
+  return useSyncExternalStore(subscribe, getSnapshot, () => ({ columnCount: 4, isPortrait: false, isCompact: false }))
 }
