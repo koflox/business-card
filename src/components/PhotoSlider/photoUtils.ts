@@ -30,7 +30,10 @@ export function buildExcludeSet(columns: ColumnState[], lastAssigned: number[]):
   return exclude
 }
 
-export function initColumns(columnCount: number, totalPhotos: number): ColumnState[] {
-  const indices = pickUniquePhotos(columnCount, new Set(), totalPhotos)
-  return indices.map(idx => ({ current: idx, next: -1, transitioning: false }))
+export function initColumns(columnCount: number, _totalPhotos: number): ColumnState[] {
+  return Array.from({ length: columnCount }, (_, i) => ({
+    current: i,
+    next: -1,
+    transitioning: false,
+  }))
 }

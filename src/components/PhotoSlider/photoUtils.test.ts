@@ -69,10 +69,11 @@ describe('initColumns', () => {
     expect(cols).toHaveLength(COLUMN_COUNT)
   })
 
-  it('all initial photos are unique across columns', () => {
+  it('columns start with sequential indices 0,1,2,3', () => {
     const cols = initColumns(COLUMN_COUNT, 15)
-    const indices = cols.map(c => c.current)
-    expect(new Set(indices).size).toBe(COLUMN_COUNT)
+    cols.forEach((col, i) => {
+      expect(col.current).toBe(i)
+    })
   })
 
   it('all columns start with transitioning=false and next=-1', () => {
